@@ -32,16 +32,51 @@ if not TELEGRAM_BOT_TOKEN:
 
 STATE_FILE         = "/home/vercel-sandbox/telegram_remote_state.json"
 LOCK_FILE          = "/home/vercel-sandbox/telegram_remote.lock"
+HISTORY_DIR        = "/home/vercel-sandbox/chat_history"
 POLL_INTERVAL      = 2
 MAX_OUTPUT_LEN     = 4000
 CLAUDE_TIMEOUT     = 120
 HEARTBEAT_INTERVAL = 300
 MAX_AI_WORKERS     = 3
+MAX_HISTORY        = 20   # 每个用户保留最近20条消息
 # ==========================
 
 last_heartbeat = time.time()
 executor = ThreadPoolExecutor(max_workers=MAX_AI_WORKERS)
 state_lock = threading.Lock()
+os.makedirs(HISTORY_DIR, exist_ok=True)
+
+
+def history_path(chat_id):
+    return os.path.join(HISTORY_DIR, f"{chat_id}.json")
+
+
+def load_history(chat_id):
+    p = history_path(chat_id)
+    if os.path.exists(p):
+        with open(p, encoding="utf-8") as f:
+            return json.load(f)
+    return []
+
+
+def save_history(chat_id, history):
+    with open(history_path(chat_id), "w", encoding="utf-8") as f:
+        json.dump(history[-MAX_HISTORY:], f, ensure_ascii=False, indent=2)
+
+
+def build_prompt(chat_id, new_message):
+    """将历史记录拼入 prompt，让 Claude 具备多轮记忆"""
+    history = load_history(chat_id)
+    if not history:
+        return new_message
+
+    lines = ["以下是我们之前的对话记录（请基于此继续回复）：", ""]
+    for entry in history:
+        role = "用户" if entry["role"] == "user" else "Claude"
+        lines.append(f"[{role}]: {entry['content']}")
+    lines.append("")
+    lines.append(f"[用户]: {new_message}")
+    return "\n".join(lines)
 
 
 def log(msg):
@@ -102,8 +137,9 @@ def execute_command(cmd):
 def ask_claude_async(chat_id, msg_id, username, text):
     log(f"[AI] [{username}] {text[:60]}")
     try:
+        prompt = build_prompt(chat_id, text)
         result = subprocess.run(
-            ["claude", "--print", text],
+            ["claude", "--print", prompt],
             capture_output=True, text=True,
             timeout=CLAUDE_TIMEOUT, cwd="/home/vercel-sandbox",
         )
@@ -115,8 +151,15 @@ def ask_claude_async(chat_id, msg_id, username, text):
     except Exception as e:
         reply = f"❌ 出错: {e}"
         log(f"[AI] 异常: {e}")
+
+    # 保存本轮对话到历史
+    history = load_history(chat_id)
+    history.append({"role": "user",      "content": text})
+    history.append({"role": "assistant", "content": reply})
+    save_history(chat_id, history)
+
     send_message(chat_id, reply, msg_id)
-    log(f"[AI] 完成 ({len(reply)}字)")
+    log(f"[AI] 完成 ({len(reply)}字) 历史:{len(history)//2}轮")
 
 
 def process_updates():
@@ -171,10 +214,19 @@ def process_updates():
                 f"🔄 AI工作线程: {executor._work_queue.qsize()} 排队"
             ), msg_id)
 
+        elif text == "/clear":
+            p = history_path(chat_id)
+            if os.path.exists(p):
+                os.remove(p)
+            send_message(chat_id, "🧹 对话历史已清除，开始新话题。", msg_id)
+            log(f"[CLEAR] [{username}] 清除历史")
+
         elif text == "/help":
+            history = load_history(chat_id)
             send_message(chat_id, (
                 "📖 使用说明\n\n"
-                "💬 直接发消息 → Claude 异步处理\n"
+                "💬 直接发消息 → Claude 异步处理（带记忆）\n"
+                f"当前对话轮数: {len(history)//2} 轮 / 最多 {MAX_HISTORY//2} 轮\n\n"
                 "示例:\n"
                 "  帮我查看系统进程\n"
                 "  读取某个文件\n"
@@ -183,6 +235,7 @@ def process_updates():
                 "  /cmd ls -lah\n"
                 "  /cmd df -h\n"
                 "  /cmd ps aux | head -10\n\n"
+                "/clear — 清除对话历史，开始新话题\n"
                 "⚠️ 高危命令自动拦截"
             ), msg_id)
 
