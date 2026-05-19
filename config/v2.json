@@ -1,0 +1,26 @@
+{
+  "_version": "2.0.0",
+  "_branch": "v2-secure",
+  "_description": "安全增强版：v1 全部功能 + 权限分级 + 审计 + 系统监控 + 告警",
+
+  "ADMIN_IDS": [7499029810],
+  "POLL_INTERVAL": 2,
+  "CLAUDE_TIMEOUT": 120,
+  "HEARTBEAT_INTERVAL": 300,
+  "MAX_AI_WORKERS": 3,
+  "MAX_HISTORY": 20,
+
+  "MEM_ALERT_PCT": 85,
+  "DISK_ALERT_PCT": 85,
+  "MONITOR_INTERVAL": 60,
+
+  "FEATURES": {
+    "ai_chat": true,
+    "cmd_exec": true,
+    "security": true,
+    "monitoring": true,
+    "games": false,
+    "tools": false,
+    "gui_keyboard": false
+  }
+}

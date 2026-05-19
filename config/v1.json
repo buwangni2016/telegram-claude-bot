@@ -1,0 +1,22 @@
+{
+  "_version": "1.0.0",
+  "_branch": "v1-simple",
+  "_description": "极简内核版：基础 AI 对话 + /cmd 终端执行",
+
+  "ADMIN_IDS": [7499029810],
+  "POLL_INTERVAL": 2,
+  "CLAUDE_TIMEOUT": 120,
+  "HEARTBEAT_INTERVAL": 300,
+  "MAX_AI_WORKERS": 2,
+  "MAX_HISTORY": 10,
+
+  "FEATURES": {
+    "ai_chat": true,
+    "cmd_exec": true,
+    "security": false,
+    "monitoring": false,
+    "games": false,
+    "tools": false,
+    "gui_keyboard": false
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "_version": "3.0.0",
+  "_branch": "v3-full",
+  "_description": "全功能娱乐版：v2 全部功能 + 图形键盘 + 游戏 + 工具箱",
+
+  "ADMIN_IDS": [7499029810],
+  "POLL_INTERVAL": 2,
+  "CLAUDE_TIMEOUT": 120,
+  "HEARTBEAT_INTERVAL": 300,
+  "MAX_AI_WORKERS": 3,
+  "MAX_HISTORY": 20,
+
+  "MEM_ALERT_PCT": 85,
+  "DISK_ALERT_PCT": 85,
+  "MONITOR_INTERVAL": 60,
+
+  "FEATURES": {
+    "ai_chat": true,
+    "cmd_exec": true,
+    "security": true,
+    "monitoring": true,
+    "games": true,
+    "tools": true,
+    "gui_keyboard": true
+  }
+}
